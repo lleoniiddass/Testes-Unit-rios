@@ -1,5 +1,7 @@
 package br.ce.wcaquino.servicos;
 
+
+
 import static br.ce.wcaquino.utils.DataUtils.isMesmaData;
 import static br.ce.wcaquino.utils.DataUtils.obterDataComDiferencaDias;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -8,6 +10,8 @@ import static org.junit.Assert.assertThat;
 
 import java.util.Date;
 
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
@@ -17,75 +21,77 @@ import br.ce.wcaquino.entidades.Filme;
 import br.ce.wcaquino.entidades.Locacao;
 import br.ce.wcaquino.entidades.Usuario;
 import br.ce.wcaquino.exceptions.FilmeSemEstoqueException;
-import junit.framework.Assert;
+import br.ce.wcaquino.exceptions.LocadoraException;
 
 public class LocacaoServiceTest {
 	
+	private LocacaoService service;
+	
+	private static int num;
+
 	@Rule
 	public ErrorCollector error = new ErrorCollector();
 	
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
-
+	
+	@Before
+	public void setup() {
+		service = new LocacaoService();
+		num++;
+		System.out.println("Numero " + num);
+	}
+	
 	@Test
 	public void testeLocacao() throws Exception {
+		//cenario
 		
-		LocacaoService locacaoService = new LocacaoService();
-		Usuario usuario = new Usuario("usuario 1");
-		Filme filme = new Filme("FILME 1", 1, 5.0);
+		Usuario usuario = new Usuario("Usuario 1");
+		Filme filme = new Filme("Filme 1", 1, 5.0);
 		
-		Locacao locacao = locacaoService.alugarFilme(usuario, filme);
-		
+		//acao
+		Locacao locacao = service.alugarFilme(usuario, filme);
+			
+		//verificacao
 		error.checkThat(locacao.getValor(), is(equalTo(5.0)));
 		error.checkThat(isMesmaData(locacao.getDataLocacao(), new Date()), is(true));
 		error.checkThat(isMesmaData(locacao.getDataRetorno(), obterDataComDiferencaDias(1)), is(true));
-
-		
-//CoreMatchers
-//		assertThat(locacao.getValor(), is(equalTo(5.0)));
-//		assertThat(locacao.getValor(), is(not(6.0)));
-//		assertEquals(5.0, locacao.getValor(), 0.01);
-//		assertTrue(isMesmaData(locacao.getDataLocacao(), new Date()));
-//		assertTrue(isMesmaData(locacao.getDataRetorno(), obterDataComDiferencaDias(1)));
 	}
 	
-	@Test(expected = Exception.class)
-	public void testeLocacaoSemEstoque() throws Exception {
+	@Test(expected = FilmeSemEstoqueException.class)
+	public void testLocacao_filmeSemEstoque() throws Exception{
+		//cenario
+		Usuario usuario = new Usuario("Usuario 1");
+		Filme filme = new Filme("Filme 2", 0, 4.0);
 		
-		LocacaoService locacaoService = new LocacaoService();
-		Usuario usuario = new Usuario("usuario 1");
-		Filme filme = new Filme("FILME 1", 0, 5.0);
-		
-		locacaoService.alugarFilme(usuario, filme);
-
+		//acao
+		service.alugarFilme(usuario, filme);
 	}
 	
 	@Test
-	public void testeLocacaoSemEstoque2() {
+	public void testLocacao_usuarioVazio() throws FilmeSemEstoqueException{
+		//cenario
+		Filme filme = new Filme("Filme 2", 1, 4.0);
 		
-		LocacaoService locacaoService = new LocacaoService();
-		Usuario usuario = new Usuario("usuario 1");
-		Filme filme = new Filme("FILME 1", 0, 5.0);
-		
-		try {			
-			locacaoService.alugarFilme(usuario, filme);
-			Assert.fail("Deveria ter lancado exceção");//caso se nenhum exceção seja lançada vai cai nessa linha
-		} catch (Exception e) {
-			assertThat(e.getMessage(), is("filme sem estoque"));
+		//acao
+		try {
+			service.alugarFilme(null, filme);
+			Assert.fail();
+		} catch (LocadoraException e) {
+			assertThat(e.getMessage(), is("Usuario vazio"));
 		}
 	}
 	
+
 	@Test
-	public void testeLocacaoSemEstoque3() throws Exception {
+	public void testLocacao_FilmeVazio() throws FilmeSemEstoqueException, LocadoraException{
+		//cenario
+		Usuario usuario = new Usuario("Usuario 1");
 		
-		LocacaoService locacaoService = new LocacaoService();
-		Usuario usuario = new Usuario("usuario 1");
-		Filme filme = new Filme("FILME 1", 0, 5.0);
+		exception.expect(LocadoraException.class);
+		exception.expectMessage("Filme vazio");
 		
-		exception.expect(Exception.class);
-		exception.expectMessage("filme sem estoque");
-
-		locacaoService.alugarFilme(usuario, filme);
-
+		//acao
+		service.alugarFilme(usuario, null);
 	}
 }
